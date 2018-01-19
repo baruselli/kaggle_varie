@@ -7,15 +7,90 @@ def RMSE(y, pred):
     return metrics.mean_squared_error(y, pred)**0.5
     
     
-def bin_enc(df,cols_to_enc):
-    import category_encoders as ce
-    print("fit")
-    encoder = ce.BinaryEncoder(cols=cols_to_enc,verbose=10).fit(df)
-    print("transform")
-    enc=encoder.transform(df)
-    return enc
+#def bin_enc(df,cols_to_enc):
+#    import category_encoders as ce
+#    print("fit")
+#    encoder = ce.BinaryEncoder(cols=cols_to_enc,verbose=10).fit(df)
+#    print("transform")
+#    enc=encoder.transform(df)
+#    return enc
     
     
+
+def bin_enc(df_in,cols_to_enc,verbose=2, drop_original=True,copy=False):
+    """Converts categorical/integer columns into binary representation
+       Input:
+        df_in: dataframe to be manipulated
+        cols_to_enc: list of columns to encode (categorical or integer)
+        verbose: how much stuff to print
+        drop_original: delete original columns given in cols_to_enc
+        copy: if True, return a new dataframe; if False, works on the input dataframe df_in
+         """
+    import numpy as np
+    #if necessary, copies df, otherwise just aliases it
+    if (copy): df=df_in.copy()
+    else:      df=df_in
+    #loop over columns
+    for col in cols_to_enc:
+        if(verbose>0): print("reading col "+col)
+        #try to convert into category
+        try:    df[col]=df[col].astype("category")
+        except: pass
+        #try to get category codes
+        try:    df[col]= df[col].cat.codes
+        except: pass
+        #maximum number to encode
+        cat_max=df[col].max()
+        if(verbose>0): print("  maximum category index ",cat_max)
+        #number of required bits
+        from math import ceil
+        from numpy import log2
+        try:
+            n_bits=ceil(log2(cat_max+1))
+        except:
+            print("warning: cannot compute number of bits, setting to 1 (maybe just one category is present)")
+            n_bits=1
+        if(verbose>0): print("  number of bits ",n_bits)
+
+        #convert integers into binary representation
+        #bin_repr=[]
+#        bin_repr={}
+#        fmt='{0:0'+str(n_bits)+'b}'
+#        for cat in range(cat_max+1):
+#            bin_repr[cat]=fmt.format(cat)
+#            bin_repr.append(fmt.format(cat))
+#        if(verbose>2): print("  binary representation")
+#        if(verbose>2): print(bin_repr)
+        #new columns, equal to the number of needed bits per category
+
+        array=df[col].values
+        array_tmp=np.zeros((len(array), n_bits))
+        for bit in range(n_bits):
+            new_col=str(col)+"_"+str(bit)
+            if(verbose>1): print("  creating new column" , new_col)
+            #cryptic but it does the job (fast)
+            array_tmp[:,bit]=1 & array[:] >> bit
+            df[new_col]=array_tmp[:,bit]
+            df[new_col] = df[new_col].astype("int8")
+        del(array_tmp)
+
+#        for bit in range(n_bits):
+#            new_col=str(col)+"_"+str(bit)
+#            if(verbose>1): print("  creating new column" , new_col)
+#            #df[new_col] = df.apply (lambda row:row[col],axis=1)
+##            df[new_col] = df.apply (lambda row:bin_repr[row[col]][bit],axis=1)
+##            df[new_col] = 1 & df[col] >>bit
+
+#            df[new_col] = df.apply (lambda row: 1 & row[col] >> bit ,axis=1)
+#            #df[new_col]df[col]%(2**bit)
+#            #the bits are just 0 or 1, so I can keep them as int8'''
+
+        if(drop_original): df.drop(labels=col,axis=1,inplace=True)
+    if (verbose>0): print ("Done!")
+    return df
+
+
+
 def train_eval_test(df,cut_date,target="unit_sales",date="date"):
     df_train=df[df[target].notnull()][df[date]<cut_date]        #train
     df_eval= df[df[target].notnull()][df[date]>= cut_date]      #test (I have data to check)
