@@ -68,7 +68,7 @@ def bin_enc(df_in,cols_to_enc,verbose=2, drop_original=True,copy=False):
         for bit in range(n_bits):
             new_col=str(col)+"_"+str(bit)
             if(verbose>1): print("  creating new column" , new_col)
-            #cryptic but it does the job (fast)
+            #cryptic but it does the job (fast), taken from https://stackoverflow.com/a/20643178
             array_tmp[:,bit]=1 & array[:] >> bit
             df[new_col]=array_tmp[:,bit]
             df[new_col] = df[new_col].astype("int8")
