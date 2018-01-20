@@ -17,25 +17,38 @@ def RMSE(y, pred):
     
     
 
-def bin_enc(df_in,cols_to_enc,verbose=2, drop_original=True,copy=False):
-    """Converts categorical/integer columns into binary representation
+def bin_enc(df_in,cols_to_enc,verbose=2, drop_original=True,copy=False, shuffle=False,seed=0):
+    """Converts categorical/integer columns into binary representation, using numpy bit-wise operations
        Input:
         df_in: dataframe to be manipulated
         cols_to_enc: list of columns to encode (categorical or integer)
         verbose: how much stuff to print
         drop_original: delete original columns given in cols_to_enc
         copy: if True, return a new dataframe; if False, works on the input dataframe df_in
+        shuffle: if True, shuffle categories from the standard choice by pandas
+        seed: if shuffle, seed for shuffling
          """
     import numpy as np
     #if necessary, copies df, otherwise just aliases it
     if (copy): df=df_in.copy()
     else:      df=df_in
+    if(shuffle):
+        import random
+        random.seed(seed)
+        if(verbose>0): print("shuffling with seed ", seed)
     #loop over columns
     for col in cols_to_enc:
         if(verbose>0): print("reading col "+col)
         #try to convert into category
         try:    df[col]=df[col].astype("category")
         except: pass
+        # shuffle categories if requested
+        if(shuffle):
+             cats=df[col].cat
+             cats_list=list(cats.categories)
+             new_list=random.sample(cats_list,len(cats_list))
+             if(verbose>2): print("shuffle with list", new_list)
+             cats.reorder_categories(new_list,inplace=True)
         #try to get category codes
         try:    df[col]= df[col].cat.codes
         except: pass
