@@ -41,17 +41,17 @@ def bin_enc(df_in,cols_to_enc,verbose=2, drop_original=True,copy=False, shuffle=
         if(verbose>0): print("reading col "+col)
         #try to convert into category
         try:    df[col]=df[col].astype("category")
-        except: pass
+        except: print ("WARNING: problem converting in category")
         # shuffle categories if requested
         if(shuffle):
              cats=df[col].cat
              cats_list=list(cats.categories)
              new_list=random.sample(cats_list,len(cats_list))
-             if(verbose>2): print("shuffle with list", new_list)
+             if(verbose>2): print("  shuffle with list", new_list)
              cats.reorder_categories(new_list,inplace=True)
         #try to get category codes
         try:    df[col]= df[col].cat.codes
-        except: pass
+        except: print ("WARNING: problem getting category codes")
         #maximum number to encode
         cat_max=df[col].max()
         if(verbose>0): print("  maximum category index ",cat_max)
