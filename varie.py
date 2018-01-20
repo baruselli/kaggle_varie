@@ -17,7 +17,7 @@ def RMSE(y, pred):
     
     
 
-def bin_enc(df_in,cols_to_enc,verbose=2, drop_original=True,copy=False, shuffle=False,seed=0):
+def bin_enc(df_in,cols_to_enc,verbose=1, drop_original=True,copy=False, shuffle=False,seed=0):
     """Converts categorical/integer columns into binary representation, using numpy bit-wise operations
        Input:
         df_in: dataframe to be manipulated
@@ -32,11 +32,12 @@ def bin_enc(df_in,cols_to_enc,verbose=2, drop_original=True,copy=False, shuffle=
     #if necessary, copies df, otherwise just aliases it
     if (copy): df=df_in.copy()
     else:      df=df_in
+    #set seed for shuffling
     if(shuffle):
         import random
         random.seed(seed)
-        if(verbose>0): print("shuffling with seed ", seed)
-    #loop over columns
+        if(verbose>0): print("Shuffling with seed ", seed)
+    #loop over columns to encode
     for col in cols_to_enc:
         if(verbose>0): print("reading col "+col)
         #try to convert into category
@@ -57,47 +58,30 @@ def bin_enc(df_in,cols_to_enc,verbose=2, drop_original=True,copy=False, shuffle=
         if(verbose>0): print("  maximum category index ",cat_max)
         #number of required bits
         from math import ceil
-        from numpy import log2
         try:
-            n_bits=ceil(log2(cat_max+1))
+            n_bits=ceil(np.log2(cat_max+1))
         except:
-            print("warning: cannot compute number of bits, setting to 1 (maybe just one category is present)")
+            print("WARNING: cannot compute number of bits, setting to 1 (maybe just one category is present)")
             n_bits=1
         if(verbose>0): print("  number of bits ",n_bits)
-
-        #convert integers into binary representation
-        #bin_repr=[]
-#        bin_repr={}
-#        fmt='{0:0'+str(n_bits)+'b}'
-#        for cat in range(cat_max+1):
-#            bin_repr[cat]=fmt.format(cat)
-#            bin_repr.append(fmt.format(cat))
-#        if(verbose>2): print("  binary representation")
-#        if(verbose>2): print(bin_repr)
-        #new columns, equal to the number of needed bits per category
-
+        #creates temporary np arrays
         array=df[col].values
         array_tmp=np.zeros((len(array), n_bits))
+        #loop over bits
         for bit in range(n_bits):
             new_col=str(col)+"_"+str(bit)
             if(verbose>1): print("  creating new column" , new_col)
-            #cryptic but it does the job (fast), taken from https://stackoverflow.com/a/20643178
+            #compute bit for each integer, cryptic but it does the job (fast)
+            #taken from https://stackoverflow.com/a/20643178
             array_tmp[:,bit]=1 & array[:] >> bit
+            #creates a new column for every bit and fills it with the temp array
             df[new_col]=array_tmp[:,bit]
+            #bit values are just 0/1, so int8 is enough
             df[new_col] = df[new_col].astype("int8")
+        #deletes temporary arrays
         del(array_tmp)
-
-#        for bit in range(n_bits):
-#            new_col=str(col)+"_"+str(bit)
-#            if(verbose>1): print("  creating new column" , new_col)
-#            #df[new_col] = df.apply (lambda row:row[col],axis=1)
-##            df[new_col] = df.apply (lambda row:bin_repr[row[col]][bit],axis=1)
-##            df[new_col] = 1 & df[col] >>bit
-
-#            df[new_col] = df.apply (lambda row: 1 & row[col] >> bit ,axis=1)
-#            #df[new_col]df[col]%(2**bit)
-#            #the bits are just 0 or 1, so I can keep them as int8'''
-
+        del(array)
+        # if necessary, drops original columns        
         if(drop_original): df.drop(labels=col,axis=1,inplace=True)
     if (verbose>0): print ("Done!")
     return df
