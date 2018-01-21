@@ -17,7 +17,7 @@ def RMSE(y, pred):
     
     
 
-def bin_enc(df_in,cols_to_enc,verbose=1, drop_original=True,copy=False, shuffle=False,seed=0):
+def bin_enc(df_in,cols_to_enc,verbose=1, drop_original=True,copy=False, shuffle=False,seed=0,ordinal_only=False):
     """Converts categorical/integer columns into binary representation, using numpy bit-wise operations
        Input:
         df_in: dataframe to be manipulated
@@ -27,6 +27,7 @@ def bin_enc(df_in,cols_to_enc,verbose=1, drop_original=True,copy=False, shuffle=
         copy: if True, return a new dataframe; if False, works on the input dataframe df_in
         shuffle: if True, shuffle categories from the standard choice by pandas
         seed: if shuffle, seed for shuffling
+        ordinal_only: if True, encodes categories as integers, and stops
          """
     import numpy as np
     #if necessary, copies df, otherwise just aliases it
@@ -53,6 +54,9 @@ def bin_enc(df_in,cols_to_enc,verbose=1, drop_original=True,copy=False, shuffle=
         #try to get category codes
         try:    df[col]= df[col].cat.codes
         except: print ("WARNING: problem getting category codes")
+        #if only ordinal encoding, stop here
+        if(ordinal_only): return df
+        ##starts the binary encoding process
         #maximum number to encode
         cat_max=df[col].max()
         if(verbose>0): print("  maximum category index ",cat_max)
