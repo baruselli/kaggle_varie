@@ -38,7 +38,7 @@ def bin_enc(df_in,cols_to_enc,verbose=1, drop_original=True,copy=False, shuffle=
         import random
         random.seed(seed)
         if(verbose>0): print("Shuffling with seed ", seed)
-    #loop over columns to encode
+    #loop over columns tteo encode
     for col in cols_to_enc:
         if(verbose>0): print("reading col "+col)
         #try to convert into category
@@ -124,16 +124,18 @@ def test(df_train,df_test,regr,y,drop):
 
     
     
-def make_csv(df_train,df_eval,df_test,regr,y,file,drop=[],columns=[]):
-    drop.append(y)
+def make_csv(df_train,df_eval,df_test,regr,y,file,drop=[],columns=[],new_column_names=[],change_col_names=False,index=False):
+    drop=list(drop)+list(y)
+    #print(drop)
     df_train_tot=df_train.append(df_eval)
+    #print(df_train_tot.head())
     #print(df_train_tot.columns)
     #print(df_eval.columns)
     X_train = df_train_tot.drop(drop,axis=1).as_matrix()
     X_test =  df_test.drop(drop,axis=1).as_matrix()
     # Split the targets into training/testing sets
     y_train = df_train_tot[y].values
-    print(X_train.shape,y_train.shape)
+    print('shapes:',X_train.shape,y_train.shape)
     regr.fit(X_train, y_train)
     y_pred = regr.predict(X_test)
     y_pred=np.maximum(0,y_pred)
@@ -141,7 +143,41 @@ def make_csv(df_train,df_eval,df_test,regr,y,file,drop=[],columns=[]):
     df_test[y]=y_pred
     #df_test["id"]=df_eval["air_store_id"].map(str)+"_"+df_eval["visit_date"].dt.strftime('%Y-%m-%d')
     #df_sub=df_eval[["id","visitors"]]
-    df_test.to_csv(file,index=False,columns=columns,float_format='%.5f')
+    if(change_col_names):
+            df_test.rename(columns={oldcol:newcol for oldcol, newcol in zip(columns, new_column_names)}).to_csv(file,index=index,columns=new_column_names,float_format='%.5f')
+    else:
+        df_test.to_csv(file,index=index,columns=columns,float_format='%.5f')
+
+
+def make_csv2(df_train,df_eval,df_test,regr,y,file,drop=[],columns=[],new_column_names=[],change_col_names=False,index=False):
+    y=list(y)
+    regr=list(regr)
+    drop=list(drop)+list(y)
+    #print(drop)
+    df_train_tot=df_train.append(df_eval)
+    #print(df_train_tot.head())
+    #print(df_train_tot.columns)
+    #print(df_eval.columns)
+    X_train = df_train_tot.drop(drop,axis=1).as_matrix()
+    X_test =  df_test.drop(drop,axis=1).as_matrix()
+    # Split the targets into training/testing sets
+    for y_,regr_ in zip(y,regr):
+        print(y_,regr_)
+        y_train = df_train_tot[y_].values
+        print('shapes:',X_train.shape,y_train.shape)
+        regr_.fit(X_train, y_train)
+        y_pred = regr_.predict(X_test)
+        y_pred=np.maximum(0,y_pred)
+        y_pred=np.expm1(y_pred)
+        df_test[y_]=y_pred
+        #df_test["id"]=df_eval["air_store_id"].map(str)+"_"+df_eval["visit_date"].dt.strftime('%Y-%m-%d')
+        #df_sub=df_eval[["id","visitors"]]
+    if(change_col_names):
+            df_test.rename(columns={oldcol:newcol for oldcol, newcol in zip(columns, new_column_names)}).to_csv(file,index=index,columns=new_column_names,float_format='%.5f')
+    else:
+        df_test.to_csv(file,index=index,columns=columns,float_format='%.5f')
+
+
     
 def lognuniform(low=0, high=1, size=None, base=10):
     return np.power(base, np.random.uniform(low, high, size))
